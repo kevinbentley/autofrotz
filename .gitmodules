@@ -1,0 +1,3 @@
+[submodule "textplayer"]
+	path = textplayer
+	url = https://github.com/danielricks/textplayer.git

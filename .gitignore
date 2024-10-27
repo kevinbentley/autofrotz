@@ -1,0 +1,8 @@
+.vscode
+launch.json
+node_modules
+package-lock.json
+package.json
+__pycache__
+*.pyc
+game_transcript.txt
