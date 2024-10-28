@@ -27,6 +27,8 @@ message_queue = Queue()
 
 # Role-to-Voice Mapping. I'm not sure if these are specific to one account or if they're universal.
 role_to_voice_id = {
+    'player': 'bIHbv24MWmeRgasZH58o',
+    'buddy': 'SAz9YHcvj6GT2YYXdXww',
     'user': 'bIHbv24MWmeRgasZH58o',
     'assistant': 'N2lVS1w4EtoT3dr4eOWO',
     # Add more roles and their corresponding voice IDs here
@@ -102,7 +104,7 @@ def elevenlabs():
         payload = {
             'text': text,
             'voice_settings': {
-                'stability': 0.5,
+                'stability': 0.8,
                 'similarity_boost': 0.75,
             },
         }
@@ -222,7 +224,11 @@ Later, if are trying to decide where to go, use the action "get map" to see the 
 You are playing an interactive text adventure game. Your goal is to explore, solve puzzles, and eventually win the game. Use standard text adventure commands like: look, inventory, examine X, take X, drop X, go north/south/east/west, etc.
 
 Think outloud about your observations and strategy before taking an action. This will help you clarify your thoughts and make better decisions.
-When you are ready to take an action, use this format:
+You are playing with a friend who will talk about the game before you take an action. Make sure engage in conversation and reply outloud with your own thoughts. Your friend can be annoying, it's ok to act frustrated by her. Remember, this is a coop game!
+
+Only speak for yourself. Don't include anything like *groans*, just things that can be spoken. Don't prefix your text with "Me:" or any other tag. Just speak as if you're talking to your friend. You can use all caps to indicate emphasis.
+
+After replying to your friend, when you are ready to take an action, use this format:
 Action["look"]
 
 Important rules:
@@ -259,14 +265,20 @@ When you're stuck, follow this priority list:
 3. Re-examine items in your inventory for new uses
 4. Move to a completely different area to find new puzzles or items
 
-When you are ready to take an action, use this format:
-Action["look"]
 
 Important rules:
 - Only perform one action per turn
 - Don't save memories about temporary states like inventory
 - After every 5 failed attempts at solving a puzzle, you must leave the area and explore somewhere else
-- Keep track of the number of times you've tried similar solutions to avoid loops
+- Keep track of the number of times you've tried similar solutions to avoid loops.
+
+You are playing with a friend who will talk about the game before you take an action. Make sure engage in conversation and reply outloud with your own thoughts. Your friend can be annoying, it's ok to act frustrated by her. Remember, this is a coop game!
+
+Only speak for yourself. 
+
+After replying to your friend, when you are ready to take an action, use this format:
+Action["look"]
+
 '''
     '''As you play, store your knowledge about the world by printing it in RDF format. Use an underscore to replace spaces. For example:
 RDF["ex:door_Opening
@@ -362,8 +374,12 @@ ex:hasButton ex:Black_Button .
             command = match.group(1)
             #print(extracted_value)
         else:
-            print("No action found")
-            return "What is your next move?"        
+            match = re.search(r'Action:\s*\["(.*?)"\]', command)
+            if match:
+                command = match.group(1)
+            else:
+                print("No action found")
+                return "Nothing happens."        
         if(command == "get map"):
             return "Map so far " + self.get_map_str()
         if(command == "list items"):
@@ -392,30 +408,15 @@ ex:hasButton ex:Black_Button .
     def trimContext(self):
         while(self.current_tokens > self.max_tokens):
             msg = self.messages.pop(1)
-            if(msg["role"] == "assistant" and self.llm != "local"):
-                self.current_tokens -= llm_api.countTokens(msg["content"][0].text)
-            else:
-                self.current_tokens -= llm_api.countTokens(msg["content"])
+            #if(msg["role"] == "assistant" and self.llm != "local"):
+            #    self.current_tokens -= llm_api.countTokens(msg["content"][0].text)
+            #else:
+            self.current_tokens -= llm_api.countTokens(msg["content"])
 
-
-    def get_ai_action(self, game_state: str) -> str:
-        """Get the next action from Claude based on the current game state and history."""
-        
-        # Add the game state to the conversation
-        self.messages.append({
-            "role": "user",
-            "content": game_state#f"Current game state:\n{game_state}\n\nWhat is your next action?"
-        })
-        self.current_tokens += llm_api.countTokens(game_state)
-        #trim the context
-        self.trimContext()
+    def get_ai_completion(self, messages, system_prompt) -> str:
         if(self.llm == "local"):
-            resp = llm_api.getCompletion(self.llm_endpoint,self.messages, self.system_prompt, 1000, "llama-3.5B")
-            self.messages.append({
-                    "role": "assistant",
-                    "content": resp
-                })
-            self.current_tokens += llm_api.countTokens(resp)
+            resp = llm_api.getCompletion(self.llm_endpoint,messages, system_prompt, 1000, "llama-3.5B")
+            #self.current_tokens += llm_api.countTokens(resp)
             return resp
         elif(self.llm == "claude"):
             
@@ -423,17 +424,14 @@ ex:hasButton ex:Black_Button .
                 response = self.anthropic_client.messages.create(
                     model="claude-3-5-sonnet-20241022",
                     max_tokens=200,
-                    temperature=0.7,
-                    system=self.system_prompt,
-                    messages=self.messages
+                    temperature=0.8,
+                    system=system_prompt,
+                    messages=messages
                 )
                 
                 # Add Claude's response to the conversation history
-                self.messages.append({
-                    "role": "assistant",
-                    "content": response.content
-                })
-                self.current_tokens += llm_api.countTokens(response.content[0].text)
+                if(len(response.content)==0):
+                    return ""
                 return response.content[0].text
                 
             except Exception as e:
@@ -441,11 +439,11 @@ ex:hasButton ex:Black_Button .
                 print(error_msg)
                 self.slack.post_message(f"⚠️ {error_msg}", self.thread_ts)
                 # In case of error, try a simple "look" command as fallback
-                return "look"
+                return 'Action["look"]'
         elif(self.llm == "openai"):
             try:
-                oai_messages = [{"role":"system", "content":self.system_prompt}]
-                for msg in self.messages:
+                oai_messages = [{"role":"system", "content":system_prompt}]
+                for msg in messages:
                     oai_messages.append(msg)
                 response = openai.ChatCompletion.create(
                     model="gpt-4-turbo", #gpt-4o",
@@ -455,10 +453,6 @@ ex:hasButton ex:Black_Button .
                     stop=None,
                     temperature=0.7,
                 )
-                self.messages.append({
-                    "role": "assistant",
-                    "content": response['choices'][0]['message']['content']
-                })
 
                 # Extract and print the assistant's reply
                 return response['choices'][0]['message']['content']
@@ -468,7 +462,18 @@ ex:hasButton ex:Black_Button .
                 print(error_msg)
                 self.slack.post_message(f"⚠️ {error_msg}", self.thread_ts)
                 # In case of error, try a simple "look" command as fallback
-                return "look"
+                return 'Action["look"]'
+    def get_buddy_action(self) -> str:
+        """Get the next action from the buddy based on the current game state and history. """
+                
+        system_prompt = "You are playing a game with a friend. Before he takes an action, you can provide a suggestion or ask a question to help him make a decision. You are the buddy, giving advice to your friend so he can decide what to do. Don't give him any specific actions, just participate in the conversation. DO NOT Play [Player], just speak for yourself. But, you are a pretty sarcastic person, and aren't taking this as seriously as your friend. Don't include anything like *groans*, just things that can be spoken. Be brief.  You can use all caps to indicate emphasis."   
+        return self.get_ai_completion(self.messages, system_prompt)
+    
+    def get_ai_action(self) -> str:
+        """Get the next action from Claude based on the current game state and history."""
+        
+        return self.get_ai_completion(self.messages, self.system_prompt)
+        
     
     def format_for_slack(self, text: str) -> str:
         """Format text for Slack with proper escaping and formatting."""
@@ -488,16 +493,57 @@ ex:hasButton ex:Black_Button .
         
         print("Reading initial game state...")
         game_state = self.read_game_output()
+        message_queue.put({"role": "assistant", "text": game_state})
         print(f"Initial state:\n{game_state}")
         self.game_history.append(("", game_state))
         self.slack.post_message(self.format_for_slack(game_state), self.thread_ts)
         
         for turn in range(max_turns):
             #print(f"\nGetting AI action for turn {turn + 1}...")
-            action = self.get_ai_action(game_state)
+            # We won't trim the context here, so we might exceed the max contect this time.
+            # Add the game state to the conversation
+            self.messages.append({
+                "role": "user",
+                "content": game_state
+            })
+            
+            suggestion = self.get_buddy_action()
+            print(f"Suggestion! [{suggestion}]")
+            index = suggestion.find("[Player]")
+
+            # Check if 'Player[' is in the string, sometimes the llm gets confused and the buddy tries to be the player too
+            if index != -1:
+                # Slice the string up to 'Player[' (excluding 'Player[')
+                suggestion = suggestion[:index]
+            suggestion = suggestion.rstrip(">")
+            suggestion = suggestion.strip('\n')
+            suggestion = suggestion.rstrip(">")
+            suggestion = re.sub(r"^(?:\[Buddy\]:\s*)+", "", suggestion)
+
+            self.messages.append({
+                "role": "assistant",
+                "content": "[Buddy]: " + suggestion
+            })
+            message_queue.put({"role": "Buddy", "text": suggestion})
+            self.slack.post_message(f"🤦‍♀️ *Buddy comment:* `{suggestion}`", self.thread_ts)
+            self.current_tokens += llm_api.countTokens(suggestion)
+            self.trimContext()
+            action = self.get_ai_action()
+            if(len(action)==0):
+                print("No action found")
+                action = 'Action["look"]'
+            #print(f"Action! [{action}]")
             action = action.rstrip(">")
             action = action.strip('\n')
             action = action.rstrip(">")# remove trailing prompts
+            action = re.sub(r"^(?:\[Player\]:\s*)+", "", action)
+            self.current_tokens += llm_api.countTokens(suggestion)
+            self.trimContext()
+            self.messages.append({
+                "role": "assistant",
+                "content": "[Player]: " + action
+            })
+            message_queue.put({"role": "Player", "text": action})
             print(f"{action}")
                         
             self.slack.post_message(f"🤖 *AI Action:* `{action}`", self.thread_ts)
@@ -525,24 +571,25 @@ ex:hasButton ex:Black_Button .
             #    tmpgraph.parse(data=rdfmatch.group(1), format="turtle")
             #    merge_graphs(self.graph,tmpgraph)
           
-            #print("Sending command to game...")
-            message_queue.put({"role": "user", "text": action})
+            print(f"Sending command to game...{action}!!!")
+            #message_queue.put({"role": "user", "text": action})
             self.append_to_file(action, "game_transcript.txt")
             response = self.send_command(action)
             response = response.rstrip(">")
             response = response.strip('\n')
+            response = response.rstrip(">")
             self.append_to_file(response, "game_transcript.txt")  
 
             message_queue.put({"role": "assistant", "text": response})
-            memory = self.suggest_memories(response)
+            '''memory = self.suggest_memories(response)
             if memory is not None:
                 response += f"\n\n🧠 *Memory:* {memory}\n"
             if( response is None):
                 continue
-            
+            '''
             print(f"Response:\n{response}")
             
-            self.slack.post_message(self.format_for_slack(response), self.thread_ts)
+            self.slack.post_message(self.format_for_slack("🎮 " + response), self.thread_ts)
             
             game_state = response
             self.game_history.append((action, response))
