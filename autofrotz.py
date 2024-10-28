@@ -17,14 +17,13 @@ from flask import Flask, jsonify, Response, request, send_from_directory
 from queue import Queue
 import threading
 import argparse
+import openai
 
-app = Flask(__name__)
-app.static_folder = os.path.abspath('public')  # Use absolute path
-app.static_url_path = ''  # This should make static files available at root
+app = Flask(__name__, static_folder='public', static_url_path='')
 
 message_queue = Queue()
 
-# Role-to-Voice Mapping
+# Role-to-Voice Mapping. I'm not sure if these are specific to one account or if they're universal.
 role_to_voice_id = {
     'user': 'bIHbv24MWmeRgasZH58o',
     'assistant': 'N2lVS1w4EtoT3dr4eOWO',
@@ -126,7 +125,10 @@ def elevenlabs():
 class SlackPoster:
     def __init__(self, webhook_url: str):
         self.webhook_url = webhook_url
-        self.enabled = False
+        if(len(webhook_url)==0):
+            self.enabled = False
+        else:
+            self.enabled = True
         
     def post_message(self, text: str, thread_ts: str = None) -> dict:
         if(not self.enabled):
@@ -135,6 +137,7 @@ class SlackPoster:
             "text": text,
             "mrkdwn": True
         }
+        # Threads aren't working for some reason
         if thread_ts:
             payload["thread_ts"] = thread_ts
             
@@ -182,7 +185,7 @@ def add_to_inventory(inventory, item_string):
 
 class FrotzAIPlayer:
     def __init__(self, game_path: str, claude_api_key: str, slack_webhook_url: str):
-        self.client = anthropic.Anthropic(api_key=claude_api_key)
+        self.anthropic_client = anthropic.Anthropic(api_key=claude_api_key)
         self.game_path = game_path
         self.game_process = None
         self.game_history = []
@@ -198,6 +201,9 @@ class FrotzAIPlayer:
         self.messages: List[dict] = []
         self.embedding_model = SentenceTransformer('thenlper/gte-large')
         self.current_tokens = 0
+        self.max_tokens = 4096
+        self.max_moves = 800
+        self.llm="local"#"local"#"openai"#"claude"
         # Initialize conversation context
         oldprompt1 = '''As you play the game, keep track of the map layout. Every time you discover a new room, print it out like this:
 Map[[room1,n,room2],[room1,d,room3]]
@@ -206,10 +212,7 @@ Later, if are trying to decide where to go, use the action "get map" to see the 
         self.system_prompt = '''
 You are playing an interactive text adventure game. Your goal is to explore, solve puzzles, and eventually win the game. Use standard text adventure commands like: look, inventory, examine X, take X, drop X, go north/south/east/west, etc.
 
-Before each action, analyze the current situation and follow these problem-solving guidelines:
-
-If you've tried the same action or similar actions 3 times without success, mark that approach as unsuccessful and try a completely different strategy.
-
+Think outloud about your observations and strategy before taking an action. This will help you clarify your thoughts and make better decisions.
 When you are ready to take an action, use this format:
 Action["look"]
 
@@ -218,8 +221,7 @@ Help["I'm stuck in the forest and don't know what to do next"]
 
 Important rules:
 - Only perform one action per turn
-- Don't save memories about temporary states like inventory
-- After every 5 failed attempts at solving a puzzle, you must leave the area and explore somewhere else
+- After a few failed attempts at solving a puzzle, you must leave the area and explore somewhere else, try a different puzzle.
 '''
         oldprompt2 = '''
         
@@ -373,9 +375,9 @@ Important rules:
         return total_history_tokens
     
     def trimContext(self):
-        while(self.current_tokens > 4096):
+        while(self.current_tokens > self.max_tokens):
             msg = self.messages.pop(1)
-            if(msg["role"] == "assistant"):
+            if(msg["role"] == "assistant" and self.llm != "local"):
                 self.current_tokens -= llm_api.countTokens(msg["content"][0].text)
             else:
                 self.current_tokens -= llm_api.countTokens(msg["content"])
@@ -392,7 +394,7 @@ Important rules:
         self.current_tokens += llm_api.countTokens(game_state)
         #trim the context
         self.trimContext()
-        if(self.use_local_llm):
+        if(self.llm == "local"):
             resp = llm_api.getCompletion(self.llm_endpoint,self.messages, self.system_prompt, 1000, "llama-3.5B")
             self.messages.append({
                     "role": "assistant",
@@ -400,12 +402,12 @@ Important rules:
                 })
             self.current_tokens += llm_api.countTokens(resp)
             return resp
-        else:            
+        elif(self.llm == "claude"):
             
             try:
-                response = self.client.messages.create(
+                response = self.anthropic_client.messages.create(
                     model="claude-3-5-sonnet-20241022",
-                    max_tokens=100,
+                    max_tokens=200,
                     temperature=0.7,
                     system=self.system_prompt,
                     messages=self.messages
@@ -425,6 +427,33 @@ Important rules:
                 self.slack.post_message(f"⚠️ {error_msg}", self.thread_ts)
                 # In case of error, try a simple "look" command as fallback
                 return "look"
+        elif(self.llm == "openai"):
+            try:
+                oai_messages = [{"role":"system", "content":self.system_prompt}]
+                for msg in self.messages:
+                    oai_messages.append(msg)
+                response = openai.ChatCompletion.create(
+                    model="gpt-4-turbo", #gpt-4o",
+                    messages=oai_messages,
+                    max_tokens=200,
+                    n=1,
+                    stop=None,
+                    temperature=0.7,
+                )
+                self.messages.append({
+                    "role": "assistant",
+                    "content": response['choices'][0]['message']['content']
+                })
+
+                # Extract and print the assistant's reply
+                return response['choices'][0]['message']['content']
+                
+            except Exception as e:
+                error_msg = f"Error getting AI response: {e}"
+                print(error_msg)
+                self.slack.post_message(f"⚠️ {error_msg}", self.thread_ts)
+                # In case of error, try a simple "look" command as fallback
+                return "look"
     
     def format_for_slack(self, text: str) -> str:
         """Format text for Slack with proper escaping and formatting."""
@@ -432,6 +461,11 @@ Important rules:
     
     def get_map_str(self):
         return str(self.map)
+    
+    def append_to_file(self,content: str, filename: str):
+        with open(filename, 'a') as file:
+            file.write(content + '\n')  # Appends content and adds a newline
+
     def play_game(self, max_turns: int = 800) -> None:
         """Play the game for a specified number of turns or until it ends."""
         print("Starting game...")
@@ -469,15 +503,19 @@ Important rules:
                 self.create_memory(match.group(1))
             #print("Sending command to game...")
             message_queue.put({"role": "user", "text": action})
-            response = self.send_command(action)            
+            self.append_to_file(action, "game_transcript.txt")
+            response = self.send_command(action)
+            response = response.rstrip(">")
+            response = response.strip('\n')
+            self.append_to_file(response, "game_transcript.txt")  
+
             message_queue.put({"role": "assistant", "text": response})
             memory = self.suggest_memories(response)
             if memory is not None:
                 response += f"\n\n🧠 *Memory:* {memory}\n"
             if( response is None):
                 continue
-            response = response.rstrip(">")
-            response = response.strip('\n')
+            
             print(f"Response:\n{response}")
             
             self.slack.post_message(self.format_for_slack(response), self.thread_ts)
@@ -554,7 +592,9 @@ if __name__ == "__main__":
 
     claude_api_key = os.getenv('ANTHROPIC_API_KEY')
     slack_webhook_url = os.getenv('SLACK_WEBHOOK_URL')
-    
+    openai.api_key = os.getenv('OPENAI_API_KEY')
+    if not openai.api_key:
+        raise ValueError("Please set the OPENAI_API_KEY environment variable")
     if not claude_api_key:
         raise ValueError("Please set the ANTHROPIC_API_KEY environment variable")
     if not slack_webhook_url:
@@ -566,7 +606,7 @@ if __name__ == "__main__":
     
     player = FrotzAIPlayer(game_path, claude_api_key, slack_webhook_url)
     try:
-        player.play_game()
+        player.play_game(max_turns=player.max_moves)
     finally:
         player.cleanup()
-        player.save_transcript("game_transcript.txt")
+        player.save_transcript("finished_game_transcript.txt")

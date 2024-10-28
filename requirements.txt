@@ -7,3 +7,4 @@ boto3
 tqdm
 anthropic
 threading
+openai
