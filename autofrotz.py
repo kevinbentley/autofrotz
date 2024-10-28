@@ -18,6 +18,8 @@ from queue import Queue
 import threading
 import argparse
 import openai
+#from rdf import RDFStateManager
+#import rdflib
 
 app = Flask(__name__, static_folder='public', static_url_path='')
 
@@ -122,6 +124,8 @@ def elevenlabs():
         return jsonify({'error': 'Internal Server Error'}), 500
 
 
+
+
 class SlackPoster:
     def __init__(self, webhook_url: str):
         self.webhook_url = webhook_url
@@ -182,10 +186,15 @@ def add_to_inventory(inventory, item_string):
         if item not in inventory:
             inventory.append(item)
 
+def merge_graphs(main_graph, temp_graph):
+    for s, p, o in temp_graph:
+        main_graph.remove((s, p, None))
+        main_graph.add((s, p, o))
 
 class FrotzAIPlayer:
     def __init__(self, game_path: str, claude_api_key: str, slack_webhook_url: str):
         self.anthropic_client = anthropic.Anthropic(api_key=claude_api_key)
+        #self.graph = rdflib.ConjunctiveGraph()
         self.game_path = game_path
         self.game_process = None
         self.game_history = []
@@ -203,7 +212,7 @@ class FrotzAIPlayer:
         self.current_tokens = 0
         self.max_tokens = 4096
         self.max_moves = 800
-        self.llm="local"#"local"#"openai"#"claude"
+        self.llm="claude"#"local"#"openai"#"claude"
         # Initialize conversation context
         oldprompt1 = '''As you play the game, keep track of the map layout. Every time you discover a new room, print it out like this:
 Map[[room1,n,room2],[room1,d,room3]]
@@ -215,9 +224,6 @@ You are playing an interactive text adventure game. Your goal is to explore, sol
 Think outloud about your observations and strategy before taking an action. This will help you clarify your thoughts and make better decisions.
 When you are ready to take an action, use this format:
 Action["look"]
-
-If you would like a hint or suggestion, ask for it explicitly:
-Help["I'm stuck in the forest and don't know what to do next"]
 
 Important rules:
 - Only perform one action per turn
@@ -262,7 +268,16 @@ Important rules:
 - After every 5 failed attempts at solving a puzzle, you must leave the area and explore somewhere else
 - Keep track of the number of times you've tried similar solutions to avoid loops
 '''
-        
+    '''As you play, store your knowledge about the world by printing it in RDF format. Use an underscore to replace spaces. For example:
+RDF["ex:door_Opening
+a ex:Knowledge ;
+ex:hasButton ex:Black_Button .
+"]
+'''    
+    def add_or_update_info(self, subject, predicate, object_):
+        self.graph.add((subject, predicate, object_))
+
+
     def get_memory_embedding(self, memory):
         embeddings = self.embedding_model.encode([memory])
         return embeddings[0]
@@ -501,6 +516,15 @@ Important rules:
             match = re.search(r'Memory\["(.*?)"\]', action)
             if match:
                 self.create_memory(match.group(1))
+
+            #rdfmatch = re.search(r'RDF\["([^"]*)"', action)
+            
+            #if(rdfmatch):
+            #    print(f"RDF match found: {rdfmatch.group(1)}")
+            #    tmpgraph = rdflib.Graph()
+            #    tmpgraph.parse(data=rdfmatch.group(1), format="turtle")
+            #    merge_graphs(self.graph,tmpgraph)
+          
             #print("Sending command to game...")
             message_queue.put({"role": "user", "text": action})
             self.append_to_file(action, "game_transcript.txt")
