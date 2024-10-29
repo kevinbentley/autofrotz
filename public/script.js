@@ -61,16 +61,27 @@ document.getElementById('stop-button').onclick = () => {
 
 async function startLoop() {
     const displayText = document.getElementById('display-text');
+    const displayImage = document.getElementById('display-image');
     const audioPlayer = document.getElementById('audio-player');
+
     while (isPlaying) {
         const data = await fetchText();
         if (!data) {
             displayText.textContent = 'Failed to retrieve text. Retrying...';
-            await new Promise(resolve => setTimeout(resolve, 5000));
+            displayImage.style.display = 'none'; // Hide the image if data fetch fails
+            await new Promise(resolve => setTimeout(resolve, 1000));
             continue;
         }
 
         displayText.textContent = `Now Playing: ${data.text}`;
+
+        if (data.image) {     
+            console.log("URL: " + data.image);       
+            displayImage.src = "http:" + data.image;
+            displayImage.style.display = 'block'; // Show the image
+        } else {
+            //displayImage.style.display = 'none'; // Hide the image
+        }
 
         const audioUrl = await getVoiceAudio(data.role, data.text);
         if (!audioUrl) {
