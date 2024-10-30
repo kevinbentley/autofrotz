@@ -6,3 +6,4 @@ package.json
 __pycache__
 *.pyc
 game_transcript.txt
+image_database.db

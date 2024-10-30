@@ -18,6 +18,7 @@ from queue import Queue
 import threading
 import argparse
 import openai
+import afimages
 #from rdf import RDFStateManager
 #import rdflib
 
@@ -128,28 +129,7 @@ def elevenlabs():
         return jsonify({'error': 'Internal Server Error'}), 500
 
 
-def generateImage(description, filename):
-    try:
-        # Call OpenAI's image generation API
-        response = openai.Image.create(
-            prompt=description,
-            n=1,
-            size="1024x1024",
-            model="dall-e-3",
-        )
-        
-        # Extract the image URL from the response
-        image_url = response['data'][0]['url']
-        
-        # Download and save the image to the specified filename
-        image_data = requests.get(image_url).content
-        with open(filename, 'wb') as file:
-            file.write(image_data)
-        
-        return True
-    except Exception as e:
-        print(f"An error occurred: {e}")
-        return False
+
 
 class SlackPoster:
     def __init__(self, webhook_url: str):
@@ -220,8 +200,8 @@ class FrotzAIPlayer:
     def __init__(self, game_path: str, claude_api_key: str, slack_webhook_url: str):
         self.anthropic_client = anthropic.Anthropic(api_key=claude_api_key)
         #self.graph = rdflib.ConjunctiveGraph()
-        self.buddy_mode = False
-        self.reflection_mode = False
+        self.buddy_mode = True
+        self.reflection_mode = True
         self.game_path = game_path
         self.game_process = None
         self.game_history = []
@@ -451,7 +431,7 @@ Important rules:
     def get_buddy_action(self) -> str:
         """Get the next action from the buddy based on the current game state and history. """
                 
-        system_prompt = "You are playing a game with a friend. Before he takes an action, you can provide a suggestion or ask a question to help him make a decision. You are the buddy, giving advice to your friend so he can decide what to do. Don't give him any specific actions, just participate in the conversation. DO NOT Play [Player], just speak for yourself. But, you are a pretty sarcastic teenage girl, and aren't taking this as seriously as your friend. Don't include anything like *groans*, just things that can be spoken. Be brief. You and your friend are emulating a MST 9000 movie, so you can be sarcastic and funny. You can use all caps to indicate emphasis. Keep your comments short."   
+        system_prompt = "You are playing a game with a friend. Before he takes an action, you can provide a suggestion or ask a question to help him make a decision. You are the buddy, giving advice to your friend so he can decide what to do. Don't give him any specific actions, just participate in the conversation. DO NOT Play [Player], just speak for yourself. But, you are a pretty sarcastic teenage girl, and aren't taking this as seriously as your friend. Don't include anything like *groans*, just things that can be spoken. Be brief. You sarcastic and funny, and you aren't afraid to make cutting comments to your friend. You can use all caps to indicate emphasis. Keep your comments short."   
         return self.get_ai_completion(self.messages, system_prompt)
     
     def get_ai_action(self) -> str:
@@ -478,7 +458,12 @@ Important rules:
         
         print("Reading initial game state...")
         game_state = self.read_game_output()
-        message_queue.put({"role": "assistant", "text": game_state, "image": "/images/autofrotz.jpg"})
+        image_url = ""
+        img = afimages.findOrGenerateImage(game_state, "public/images")
+        if(img is not None):
+            basename = os.path.basename(img)
+            image_url = f"/images/{basename}"
+        message_queue.put({"role": "assistant", "text": game_state, "image": image_url})#"/images/autofrotz.jpg"})
         print(f"Initial state:\n{game_state}")
         self.game_history.append(("", game_state))
         self.slack.post_message(self.format_for_slack(game_state), self.thread_ts)
@@ -529,7 +514,12 @@ Important rules:
                 "role": "assistant",
                 "content": "[Player]: " + action
             })
-            message_queue.put({"role": "Player", "text": action})
+            match = re.search(r'Action\["(.*?)"\]', action)
+
+            if not self.reflection_mode and match:
+                message_queue.put({"role": "Player", "text": match.group(1)})
+            else:
+                message_queue.put({"role": "Player", "text": action})
             print(f"Player: {action}")
                         
             self.slack.post_message(f"🤖 *AI Action:* `{action}`", self.thread_ts)
@@ -564,63 +554,18 @@ Important rules:
             response = response.rstrip(">")
             response = response.strip('\n')
             image_url = None
-            # Get the first line of the response. We're looking for a room name,
-            # which is usually the first line of the response. We'll only look if the last action was a movement or look action.
-            move_actions = ["n","e","s","w","ne","nw","se","sw","u","d","look", "go north", 
-                            "go south", "go east", "go west", "go up", "go down", "walk north", 
-                            "walk south", "walk east", "walk west", "walk up", "walk down", 
-                            "go northeast", "go northwest", "go southeast", "go southwest", 
-                            "walk northeast", "walk northwest", "walk southeast", "walk southwest"]
-            match = re.search(r'Action\["(.*?)"\]', action)
+            
+            img = afimages.findOrGenerateImage(response, "public/images")
+            if(img is not None):
+                basename = os.path.basename(img)
+                image_url = f"/images/{basename}"
 
-            if match:
-                action = match.group(1)
-            else:
-                match = re.search(r'Action:\s*\["(.*?)"\]', action)
-                if match:
-                    action = match.group(1)
-            action = action.lower()
-            image_url = ""
-            if(action in move_actions):
-                lines = response.strip('\n').split("\n")
-                # Now, we keep a dictionary with: room name, description, and image.
-                # If the room is already in the dictionary, AND the description is different, we update the description.
-                # If the room is not in the dictionary, we add it.
-                # In either of those cases, we use openai to get an image from the prompt.
-                # Then we save the image locally as "room_name.jpg".
-                # We also add the image to the slack message.
-                # Then we add the URL for the image to the message_queue as a field
-                if(len(lines)>0):
-                    room = lines[0].lower()
-                    regenerate = False
-                    image_url = f"/images/{room}.jpg"
-                    print(f"Room: {room}")
-                    room_description = " ".join(lines[1:])
-                    generate_image = False
-                    if(room in self.room_images.keys()):
-                        if(len(room_description) > 0 and room_description != self.room_images[room]["description"]):
-                            self.room_images[room]["description"] = room_description
-                            generate_image = True
-                            print(f"Description updated for room {room}")
-                            regenerate = True
-                    else:
-                        if(len(lines)>1):
-                            self.room_images[room] = {"description": room_description}
-                            generate_image = True
-                            print(f"New room {room} added")
-                    if(generate_image):
-                        filename = f"public/images/{room}.jpg"
-                        if(regenerate or not os.path.exists(filename)):
-                            generateImage(room_description, filename)
-                        self.room_images[room]["image"] = filename                        
-                        #message_queue.put({"role": "assistant", "text": f"🖼️ Image generated for room: {room}"})
-                    
             response = response.rstrip(">")
             response = response.strip('\n')
             response = response.rstrip(">")
             self.append_to_file(response, "game_transcript.txt")  
             q = {"role": "assistant", "text": response}
-            if(len(image_url)>0):
+            if(image_url is not None):
                 q["image"] = image_url
             message_queue.put(q)
             '''memory = self.suggest_memories(response)
