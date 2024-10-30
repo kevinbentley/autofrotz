@@ -96,7 +96,7 @@ def getPrompt(description) -> str:
     If the text doesn't make sense to show a picture for (e.g. just a single word, 
     or a short phrase with no visual description), just say 'skip'. Otherwise, 
     give me a prompt I can use with the image generation model to get a picture 
-    for it.'''
+    for it. Make sure the prompt will generate a picture that passes content moderation.'''
     messages.append({"role":"system", "content":prompt})
     messages.append({"role":"user", "content":description})
     response = openai.ChatCompletion.create(
