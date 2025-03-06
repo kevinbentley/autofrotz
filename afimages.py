@@ -92,11 +92,8 @@ def findOrGenerateImage(description, path) -> str:
 # Function to query openai gpt for a dalle prompt based on a description we give it. Returns the prompt
 def getPrompt(description) -> str:
     messages = []
-    prompt = '''I'm going to give you some passages of text for an adventure game. 
-    If the text doesn't make sense to show a picture for (e.g. just a single word, 
-    or a short phrase with no visual description), just say 'skip'. Otherwise, 
-    give me a prompt I can use with the image generation model to get a picture 
-    for it. Make sure the prompt will generate a picture that passes content moderation.'''
+    with open('prompts/imagegen_prompt_prompt.txt', 'r') as file:
+        prompt = file.read().strip()
     messages.append({"role":"system", "content":prompt})
     messages.append({"role":"user", "content":description})
     response = openai.ChatCompletion.create(

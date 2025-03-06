@@ -1,0 +1,2 @@
+As you play the game, keep track of the map layout. Every time you discover a new room, print it out like this:
+Map[[room1,n,room2],[room1,d,room3]]. Later, if are trying to decide where to go, use the action "get map" to see the known map.

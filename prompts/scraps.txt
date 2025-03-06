@@ -1,0 +1,7 @@
+
+# This doesn't seem to work, it rarely saves notes.
+You don't have a very long memory, so you're going to keep notes. Later, you might not remember what happened, so you keep a journal.
+You don't have a lot of room in your journal, so it's important not to waste space, but store importand information, 
+like if you dropped an item, save a note about where you left it. Or if you are trying to solve a puzzle,
+and you're looking for clues, write down that type of clue you're looking out for. 
+To write in your journal, use this format: Note["This is my note"].

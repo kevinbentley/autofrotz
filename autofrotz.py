@@ -29,9 +29,9 @@ message_queue = Queue()
 # Role-to-Voice Mapping. I'm not sure if these are specific to one account or if they're universal.
 role_to_voice_id = {
     'xplayer': 'bIHbv24MWmeRgasZH58o',
-    'Xbuddy': 'SAz9YHcvj6GT2YYXdXww',
+    'buddy': 'SAz9YHcvj6GT2YYXdXww',
     'player': 'bIHbv24MWmeRgasZH58o',
-    'buddy': 'SPavHXefn4qr6bDvZI10',
+    'xbuddy': 'SPavHXefn4qr6bDvZI10',
     'user': 'bIHbv24MWmeRgasZH58o',
     'assistant': 'N2lVS1w4EtoT3dr4eOWO',
     # Add more roles and their corresponding voice IDs here
@@ -200,9 +200,12 @@ class FrotzAIPlayer:
     def __init__(self, game_path: str, claude_api_key: str, slack_webhook_url: str):
         self.anthropic_client = anthropic.Anthropic(api_key=claude_api_key)
         #self.graph = rdflib.ConjunctiveGraph()
-        self.buddy_mode = True
+        self.buddy_mode = False
         self.reflection_mode = True
+        self.map_mode = False
         self.game_path = game_path
+        self.generate_images = False
+
         self.game_process = None
         self.game_history = []
         self.room_images = {}
@@ -213,44 +216,35 @@ class FrotzAIPlayer:
         self.use_local_llm = False
         self.llm_endpoint = "http://172.16.4.30:9001"
         self.qcollection = "zork1-1"
-        self.qclient = qdrant.get_client("172.16.4.30",6333)
-        qdrant.make_collection(client=self.qclient,collection_name=self.qcollection,vecsize=1024)# vecsize is based on the sentencetransformer's size
+        self.qclient = None #qdrant.get_client("172.16.4.30",6333)
+        #qdrant.make_collection(client=self.qclient,collection_name=self.qcollection,vecsize=1024)# vecsize is based on the sentencetransformer's size
         self.messages: List[dict] = []
         self.embedding_model = SentenceTransformer('thenlper/gte-large')
         self.current_tokens = 0
         self.max_tokens = 4096
         self.max_moves = 800
         self.llm="openai"#"local"#"openai"#"claude"
+        self.buddy_prompt = None
+        self.summary_prompt = None
+        self.summary = ""
         # Initialize conversation context
-        oldprompt1 = '''As you play the game, keep track of the map layout. Every time you discover a new room, print it out like this:
-Map[[room1,n,room2],[room1,d,room3]]
-Later, if are trying to decide where to go, use the action "get map" to see the known map..'''
+
+        with open('prompts/simple_prompt.txt', 'r') as file:
+            self.system_prompt = file.read().strip()
+        if(self.map_mode):
+            with open('prompts/store_map_prompt.txt', 'r') as file:
+                self.system_prompt += file.read().strip()
         if(self.reflection_mode):
-            self.system_prompt = '''
-You are playing an interactive text adventure game. Your goal is to explore, solve puzzles, and eventually win the game. Use standard text adventure commands like: look, inventory, examine X, take X, drop X, go north/south/east/west, etc.
+            with open('prompts/reflection_prompt.txt', 'r') as file:
+                self.system_prompt += file.read().strip()
+        if(self.buddy_mode):
+            with open('prompts/playing_with_buddy.txt', 'r') as file:
+                self.system_prompt += file.read().strip()
+            with open('prompts/buddy_prompt.txt', 'r') as file:
+                self.buddy_prompt = file.read().strip()        
+        with open('prompts/summary_prompt.txt', 'r') as file:
+            self.summary_prompt = file.read().strip()
 
-Think outloud about your observations and strategy before taking an action. This will help you clarify your thoughts and make better decisions.
-Only speak for yourself. Don't include anything like *groans*, just things that can be spoken. Don't prefix your text with "Me:" or any other tag. Just speak as if you're talking to your friend. You can use all caps to indicate emphasis. Keep your comments short.
-
-
-'''
-            if(self.buddy_mode):
-                self.system_prompt = self.system_prompt + '''You are playing with a friend who will talk about the game before you take an action. Make sure engage in conversation and reply outloud with your own thoughts. Your friend can be annoying, it's ok to act frustrated by her. Remember, this is a coop game!
-You and your friend are emulating a MST 9000 movie, so you can be sarcastic and funny.
-After replying to your friend, when you are ready to take an action, '''
-            else:
-                self.system_prompt += 'You are a highly analytical thinker, and pay close attention to the game, map, and puzzles'
-        else:
-            self.system_prompt = '''You are playing an interactive text adventure game. 
-            Your goal is to explore, solve puzzles, and eventually win the game. 
-            Use standard text adventure commands like: look, inventory, examine X, 
-            take X, drop X, go north/south/east/west, etc.'''
-        self.system_prompt += '''Use this format to take an action: Action["look"]
-
-Important rules:
-- Only perform one action per turn
-- After a few failed attempts at solving a puzzle, you must leave the area and explore somewhere else, try a different puzzle.'''
-   
     def add_or_update_info(self, subject, predicate, object_):
         self.graph.add((subject, predicate, object_))
 
@@ -408,12 +402,17 @@ Important rules:
         elif(self.llm == "openai"):
             try:
                 oai_messages = [{"role":"system", "content":system_prompt}]
+                history_str = ""
                 for msg in messages:
-                    oai_messages.append(msg)
+                    history_str += f'{msg["role"]}: {msg["content"]}\n'
+                #    oai_messages.append(msg)
+                oai_messages.append({"role":"user", "content":history_str})
+                #for msg in messages:
+                #    oai_messages.append(msg)
                 response = openai.ChatCompletion.create(
                     model="gpt-4o",#gpt-4-turbo", #gpt-4o",
                     messages=oai_messages,
-                    max_tokens=200,
+                    max_tokens=500,
                     n=1,
                     stop=None,
                     temperature=0.7,
@@ -430,16 +429,20 @@ Important rules:
                 return 'Action["look"]'
     def get_buddy_action(self) -> str:
         """Get the next action from the buddy based on the current game state and history. """
-                
-        system_prompt = "You are playing a game with a friend. Before he takes an action, you can provide a suggestion or ask a question to help him make a decision. You are the buddy, giving advice to your friend so he can decide what to do. Don't give him any specific actions, just participate in the conversation. DO NOT Play [Player], just speak for yourself. But, you are a pretty sarcastic teenage girl, and aren't taking this as seriously as your friend. Don't include anything like *groans*, just things that can be spoken. Be brief. You sarcastic and funny, and you aren't afraid to make cutting comments to your friend. You can use all caps to indicate emphasis. Keep your comments short."   
-        return self.get_ai_completion(self.messages, system_prompt)
+        
+
+        return self.get_ai_completion(self.messages, self.buddy_prompt)
     
     def get_ai_action(self) -> str:
         """Get the next action from Claude based on the current game state and history."""
         
         return self.get_ai_completion(self.messages, self.system_prompt)
         
-    
+    def get_game_summary(self) -> str:
+        """Use the llm to make a summary of the game so far."""
+        return self.get_ai_completion(self.messages, self.summary_prompt)
+
+
     def format_for_slack(self, text: str) -> str:
         """Format text for Slack with proper escaping and formatting."""
         return f"```{text}```"
@@ -467,7 +470,7 @@ Important rules:
         print(f"Initial state:\n{game_state}")
         self.game_history.append(("", game_state))
         self.slack.post_message(self.format_for_slack(game_state), self.thread_ts)
-        
+        turn_number = 0
         for turn in range(max_turns):
             #print(f"\nGetting AI action for turn {turn + 1}...")
             # We won't trim the context here, so we might exceed the max contect this time.
@@ -476,7 +479,7 @@ Important rules:
                 "role": "user",
                 "content": game_state
             })
-            
+            self.append_to_file("Game: " + game_state, "game_transcript.txt")
             if(self.buddy_mode):
                 suggestion = self.get_buddy_action()
                 print(f"Buddy: {suggestion}")
@@ -496,9 +499,22 @@ Important rules:
                     "content": "[Buddy]: " + suggestion
                 })
                 message_queue.put({"role": "Buddy", "text": suggestion})
+                self.append_to_file("Buddy: " + suggestion, "game_transcript.txt")
                 self.slack.post_message(f"🤦‍♀️ *Buddy comment:* `{suggestion}`", self.thread_ts)
                 self.current_tokens += llm_api.countTokens(suggestion)
                 self.trimContext()
+            # Every 20 moves, we're going to ask for a summary of the game so far
+            turn_number += 1
+            if(turn_number % 30 == 0):
+                self.summary += self.get_game_summary()
+                print(f"Summary: {self.summary}")
+                # Now we're going to clear the previous messages, and replace it with just the summary.
+                self.messages = []
+                self.messages.append({
+                    "role": "user",
+                    "content": self.summary
+                })
+
             action = self.get_ai_action()
             if(len(action)==0):
                 print("No action found")
@@ -548,26 +564,22 @@ Important rules:
             #    merge_graphs(self.graph,tmpgraph)
           
             #message_queue.put({"role": "user", "text": action})
-            self.append_to_file(action, "game_transcript.txt")
+            self.append_to_file("Player: " + action, "game_transcript.txt")
             # send the command to the game
             response = self.send_command(action)
-            response = response.rstrip(">")
+            response = response.replace(">", "")
             response = response.strip('\n')
             image_url = None
-            
-            img = afimages.findOrGenerateImage(response, "public/images")
-            if(img is not None):
-                basename = os.path.basename(img)
-                image_url = f"/images/{basename}"
-
-            response = response.rstrip(">")
-            response = response.strip('\n')
-            response = response.rstrip(">")
-            self.append_to_file(response, "game_transcript.txt")  
-            q = {"role": "assistant", "text": response}
-            if(image_url is not None):
-                q["image"] = image_url
-            message_queue.put(q)
+            if(self.generate_images):
+                img = afimages.findOrGenerateImage(response, "public/images")
+                if(img is not None):
+                    basename = os.path.basename(img)
+                    image_url = f"/images/{basename}"
+                self.append_to_file("Game: " + response, "game_transcript.txt")  
+                q = {"role": "assistant", "text": response}
+                if(image_url is not None):
+                    q["image"] = image_url
+                message_queue.put(q)
             '''memory = self.suggest_memories(response)
             if memory is not None:
                 response += f"\n\n🧠 *Memory:* {memory}\n"

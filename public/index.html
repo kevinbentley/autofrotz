@@ -10,9 +10,9 @@
             color: #2c3e50;
             line-height: 1.6;
             padding: 2rem;
-            max-width: 1200px;
             margin: 0 auto;
             font-size: 18px;
+            min-height: 100vh;
         }
 
         h1 {
@@ -26,13 +26,41 @@
             display: none;
         }
 
+        .content-wrapper {
+            display: flex;
+            gap: 2rem;
+            max-width: 1600px;
+            margin: 0 auto;
+            align-items: flex-start;
+        }
+
+        .left-column {
+            flex: 1;
+            min-width: 300px;
+            max-width: 600px;
+        }
+
+        .right-column {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            position: sticky;
+            top: 2rem;
+        }
+
         #display-image {
-            max-width: 768px;
-            max-height: 768px;
-            width: auto;
-            height: auto;
+            width: 768px;
+            height: 768px;
+            object-fit: contain;
             display: block;
-            margin: 2rem auto;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .button-container {
+            margin-bottom: 1rem;
         }
 
         button {
@@ -40,7 +68,7 @@
             color: white;
             border: none;
             padding: 10px 20px;
-            margin: 10px;
+            margin-right: 10px;
             border-radius: 5px;
             cursor: pointer;
             font-size: 1rem;
@@ -56,7 +84,8 @@
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin: 20px 0;
+            margin-bottom: 20px;
+            min-height: 400px;
         }
     </style>
 </head>
@@ -64,10 +93,18 @@
     <h1>AutoFrotz - AI Plays a game...</h1>
     <audio id="audio-player" controls></audio>
 
-    <button id="start-button">Start</button>
-    <button id="stop-button">Stop</button>
-    <p id="display-text"></p>
-    <img id="display-image" style="display: none;" alt="Dynamic Content Image" />
+    <div class="content-wrapper">
+        <div class="left-column">
+            <div class="button-container">
+                <button id="start-button">Start</button>
+                <button id="stop-button">Stop</button>
+            </div>
+            <p id="display-text"></p>
+        </div>
+        <div class="right-column">
+            <img id="display-image" style="display: none;" alt="Dynamic Content Image" />
+        </div>
+    </div>
 
     <script src="script.js"></script>
 </body>

@@ -1,0 +1,251 @@
+Using normal formatting.
+Loading textplayer/games/zork1.z5.
+
+
+ZORK I: The Great Underground Empire
+Copyright (c) 1981, 1982, 1983 Infocom, Inc. All rights reserved.
+ZORK is a registered trademark of Infocom, Inc.
+Revision 88 / Serial number 840726
+
+West of House
+You are standing in an open field west of a white house, with a boarded front
+door.
+There is a small mailbox here.
+
+>
+> Alright, we're starting off right outside a mysterious white house. The front door is boarded up, so that's not an option for entry right now. We've got a small mailbox here. Mailboxes in games like this often contain useful items or clues. Let's check that out first.
+
+Action["open mailbox"]
+Opening the small mailbox reveals a leaflet.
+> Nice, there's a leaflet inside the mailbox. Leaflets can sometimes provide important information or hints. Let's take a look at it and see what it says. 
+
+Action["take leaflet"]
+Taken.
+> Great, we've got the leaflet. This could have important information about the game world or hints on what to do next. Let's read it to see if it provides any clues or objectives. 
+
+Action["read leaflet"]
+"WELCOME TO ZORK!
+
+ZORK is a game of adventure, danger, and low cunning. In it you will explore
+some of the most amazing territory ever seen by mortals. No computer should be
+without one!"
+> Alright, the leaflet doesn't give us specific instructions but sets the tone for the adventure. It’s clear that exploration is key, and there will be challenges ahead. The house remains intriguing, and there must be a way inside. 
+
+Let's check out the area further to see if there are other entry points or items. There might be clues around the house or in the field. 
+
+Action["look"]
+West of House
+You are standing in an open field west of a white house, with a boarded front
+door.
+There is a small mailbox here.
+> It looks like we're back to the starting point. No new information from looking around again. The leaflet didn't provide specific clues, but it's clear that exploration and perhaps some cunning will be necessary. We need to find a way inside or discover more about this area.
+
+I think it's time to explore the surroundings of the house more closely. There might be other paths or details on another side of the house. Let's try going around the house to see if there are any other points of interest.
+
+Action["go north"]
+North of House
+You are facing the north side of a white house. There is no door here, and all
+the windows are boarded up. To the north a narrow path winds through the trees.
+> We made it to the north side of the house, but unfortunately, it seems just as inaccessible as the front. The windows are boarded up, so we can't get in that way either. However, there's a narrow path leading through the trees to the north. This path might lead us to something useful or another way into the house. Since exploration is key, I think we should follow the path and see where it takes us. 
+
+Action["go north"]
+Forest Path
+This is a path winding through a dimly lit forest. The path heads north-south
+here. One particularly large tree with some low branches stands at the edge of
+the path.
+> We're on a forest path now, moving away from the house. The large tree with low branches stands out. Trees like this can sometimes hide secrets or provide a way to climb and see something from a different perspective. It's worth checking out. Let's examine the tree closely to see if there are any clues or possibilities here. 
+
+Action["examine tree"]
+There's nothing special about the tree.
+> Hmm, the tree doesn't seem to hold any secrets or hidden items, which is a bit disappointing. But it was worth checking out. We're on a path that continues north-south. Since we came from the south, let's keep heading north to see where this path leads. Maybe we'll find something useful or another area to explore.
+
+Action["go north"]
+Clearing
+You are in a clearing, with a forest surrounding you on all sides. A path leads
+south.
+On the ground is a pile of leaves.
+> A clearing in the forest with a pile of leaves could be interesting. Leaves often hide things in games like this. It might be worth investigating them to see if there's anything underneath or if they contain something useful. We should definitely take a closer look at the pile of leaves before deciding our next move. 
+
+Action["examine leaves"]
+There's nothing special about the pile of leaves.
+> Alright, so here's what we know: the house is currently inaccessible, and we've explored a bit of the surrounding area. We've got a path that continues south from the clearing where we found that unremarkable pile of leaves. 
+
+Let's see what our priorities should be. We definitely need to find a way into the house eventually, but right now, it seems the game wants us to explore more. Maybe there's a tool or clue further along the path that could help us with the house or provide more context for our adventure.
+
+For now, I think it makes sense to continue exploring. Let's follow the path south and see where it leads. 
+
+Action["go south"]
+Forest Path
+> The path leads you back to the forest path you previously encountered. The large tree is still here, standing tall and seemingly ordinary. To the north is the clearing with the pile of leaves, and to the south, the path you just came from. To the east, the path continues deeper into the forest, and to the west, it leads back toward the white house.
+
+Alright, so we're back at the forest path. We have a couple of options here. We could head east to explore deeper into the forest or go back west toward the white house. 
+
+Since we've got no new tools or clues yet, I think our best bet is to keep exploring the forest. There might be something interesting east that could help us progress. 
+
+Action["go east"]
+Forest
+This is a dimly lit forest, with large trees all around.
+You hear in the distance the chirping of a song bird.
+> Okay, so we've moved further into the forest, and we're greeted by the sounds of nature. It's a dimly lit place, which might mean there are hidden elements or paths we need to look out for. The sound of a songbird is interesting; it could be a clue or just atmospheric. 
+
+We should consider our options here. Exploring further might reveal something useful, and the sound of the bird might be worth investigating. It's possible that there are hidden paths or items here that could be crucial for our adventure.
+
+To make sure we don't miss anything, I think we should take a moment to look around and see if there's anything notable in the immediate area.
+
+Action["look"]
+Forest
+This is a dimly lit forest, with large trees all around.
+> Alright, so we're still in this dimly lit forest surrounded by large trees. The description hasn't changed much, but that doesn't mean there isn't something here. Sometimes the key to progress in these games is a small detail or interaction hidden in a seemingly ordinary location.
+
+We could try examining specific elements of the environment, like the trees themselves, to see if there's anything unusual about them. The songbird might also be a subtle hint, suggesting there's something to find if we follow the sound. 
+
+For now, I think we should start by examining the trees. They might have something hidden or a clue to guide us further.
+
+Action["examine trees"]
+There's nothing special about the forest.
+> Alright, so examining the trees didn't reveal anything special. It's a bit of a dead end for now. Let's think about our next move. The sound of the songbird might still be an important clue, or maybe it's just there to add atmosphere. Either way, it might be worth trying to follow the sound if we can hear it more distinctly in one direction.
+
+Alternatively, since there's nothing special about the trees here, we could try heading in a new direction. We've gone east into the forest; maybe we should explore further in another direction—north, south, or back west.
+
+Since the game hinted at the songbird, let's try to see if there's any path or direction where the sound seems louder or more distinct. That might guide us to something useful.
+
+Action["listen carefully"]
+I don't know the word "carefully".
+> Alright, so it looks like the game didn't understand my attempt to listen carefully. It's a pretty old-school text adventure, so we might need to use simpler commands.
+
+The chirping of the songbird might be a clue, but without a direct way to interact with the sound, we might need to focus on exploring new areas instead. Since we've already come from the west and explored north and south paths previously, maybe heading further east could lead us to something new.
+
+Let's keep pushing forward and see if the path east reveals anything interesting. 
+
+Action["go east"]
+Forest
+The forest thins out, revealing impassable mountains.
+> Looks like we've hit a natural boundary with impassable mountains to the east. This limits our exploration in that direction. So, the forest path east doesn't seem to provide any further avenues for exploration. 
+
+Given this, we should consider our remaining options. We've explored north to the clearing, south back to the forest path, and east to the mountains. West leads us back toward the white house.
+
+Maybe there's something we've missed back near the house or on one of the paths we've already explored. It's possible that there are hidden interactions or objects that require a more thorough examination.
+
+Let's head back west to the forest path and then re-evaluate our options from there. We might need to revisit the house area to see if there's a way to get inside or find something we've overlooked.
+
+Action["go west"]
+Forest
+> Alright, we're back in the dimly lit forest. We've reached the limits of exploration to the east, which means we should reconsider the areas we've already visited. The house is likely key to advancing the story, but it's boarded up. 
+
+The forest path itself might hold a clue we've missed. The pile of leaves in the clearing, the large tree, or even the path south might have something we didn't fully explore or interact with. 
+
+We've got a few choices: head back to the clearing to re-inspect the pile of leaves, examine the large tree more closely, or return to the white house area. Since we're already in the forest, it might be worth going back to the clearing to see if there's anything hidden under or around the pile of leaves. 
+
+Let's give that a shot and see if it leads to anything new. 
+
+Action["go north"]
+The forest becomes impenetrable to the north.
+> Alright, so it seems we've hit another boundary. The forest is impenetrable to the north from here. It seems like our movement is a bit restricted in certain areas, which might mean we need to focus on exploring more thoroughly the accessible locations.
+
+Let's think this through. We have a blocked path east with the mountains and a blocked path north here. Our options are narrowing down a bit. We've come from the south from the forest path and explored west toward the house already.
+
+Since heading north from this spot isn't possible, let's re-evaluate our exploration of the accessible areas. The clearing with leaves did seem like it could hold something, and we haven't yet fully exhausted all possibilities there.
+
+I think our best move now is to head back to the clearing from the forest path, which we know is south from here. Let's see if there's anything else we can uncover.
+
+Action["go south"]
+Clearing
+You are in a small clearing in a well marked forest path that extends to the
+east and west.
+> Alright, we're back in the clearing. This is the area with the pile of leaves, which seemed unremarkable at first glance. But since we've hit some dead ends elsewhere, it's worth taking another look here.
+
+The game often hides important items or clues in places that seem ordinary at first, so maybe there's something under the leaves or nearby that we didn't notice before. We should try to interact with the environment more directly.
+
+Let's see if we can uncover anything by searching or moving the leaves. This might reveal something useful or a path forward that we haven't discovered yet.
+
+Action["examine leaves"]
+You can't see any leaves here!
+> seem to be narrowing down. It looks like we've thoroughly investigated the northern path and the areas surrounding the house, but haven't found any means to enter the house or progress further. 
+
+Alright, let's think about our strategy here. The house is likely a key location, and there might be a way to get inside that we haven't discovered yet. Since the front and north side are boarded up, maybe we should consider examining other parts of the house or the surrounding area more closely. 
+
+There's also a small detail that we might have overlooked. The pile of leaves might have been a distraction or might have been disturbed. I'll consider other directions or actions that could help us find a way into the house. 
+
+Let's head back to the open field and take a closer look around the house, especially the southern and eastern sides, if accessible. Maybe there's something we missed. 
+
+Action["go south"]
+Forest
+This is a dimly lit forest, with large trees all around.
+> Hmm, it seems like we're back in the forest instead of the open field. The dimly lit forest probably connects to the clearing we were just in. We might have misunderstood the direction a bit, but that's okay. 
+
+Given that we're in the forest again, maybe there's something here we haven't found yet. We've already checked east and north, and we know south leads back to the clearing. Perhaps we missed something to the west or there's another feature of the forest we haven't fully explored.
+
+Let's try heading back west to see if it leads us back to the open field near the house. Once there, we can make sure we've checked all possible angles around the house for potential entry points. 
+
+Action["go west"]
+Forest
+This is a forest, with trees in all directions. To the east, there appears to be
+sunlight.
+> Alright, we're still in the forest, but it sounds like we're close to the edge since there's sunlight to the east. This suggests we're not far from the clearing or another open space. The forest can be a bit disorienting with all these similar descriptions, so we'll need to keep track of directions carefully.
+
+Since we know east leads towards sunlight, and we've already explored north and south directions from the clearing, let's consider heading further west. This might bring us back to the open field near the house or to another part of the forest that might have been overlooked.
+
+Let's try heading west again to see if we can find our way back to the open field or discover something new.
+
+Action["go west"]
+You would need a machete to go further west.
+> Looks like we're blocked from going further west without a machete. That suggests there might be something important in that direction, but we can't reach it yet. 
+
+We're close to the open field, as indicated by the sunlight to the east. Since we can't go west, maybe we should head east towards the sunlight to confirm our location. 
+
+Once we're back in an open area, we can reassess and try to find another way into the house or locate any hidden items nearby that might help, like a key or the aforementioned machete.
+
+Action["go east"]
+Forest Path
+> Alright, we're back on the forest path. This is a familiar spot, and it connects various areas we've been exploring. From here, we can make our way back to the open field near the house, which should be to the south. 
+
+Returning to the open field will give us a fresh perspective on the house, and we can carefully check for any overlooked entry points or clues. Additionally, we should keep an eye out for any items that might be useful, like the machete mentioned earlier.
+
+Let's head south to return to the open field near the house and continue our investigation from there.
+
+Action["go south"]
+North of House
+> Great, we're back near the house. This is a key location, and getting inside might be crucial for our progress. We've already checked the front and north sides, which are boarded up.
+
+Now that we're here, let's focus on the east and south sides of the house. There might be a back door, window, or any other feature we haven't noticed yet. 
+
+Let's start by examining the south side of the house. Maybe there's a hidden entrance or something that can help us gain access to the interior. 
+
+Action["go south"]
+The windows are all boarded.
+> It seems like the south side of the house is also boarded up, similar to the north and front sides. This house really doesn't want us getting in easily! 
+
+We haven't yet tried the east side, so we should definitely check that out next. There's always the possibility that there's a weak spot or an alternative entrance. Maybe there's a cellar door or something similar on the east side that could provide access.
+
+Let's head over to the east side of the house and see if there's anything there that we can use to our advantage.
+
+Action["go east"]
+Behind House
+You are behind the white house. A path leads into the forest to the east. In one
+corner of the house there is a small window which is slightly ajar.
+> A slightly ajar window! This could be our way in. It's the first real opportunity we've found to get into the house. We should take a closer look at this window to see if it's possible to open it further and enter the house. 
+
+It's exciting to finally have a potential entry point after all that exploration. Let's examine the window more closely to see if we can make it inside.
+
+Action["examine window"]
+The window is slightly ajar, but not enough to allow entry.
+> Hmm, the window is slightly ajar but not enough for us to get through. Maybe we need to find a way to open it further. There might be a tool or object nearby that could help us with this, or perhaps there's a mechanism we can use to widen the opening.
+
+Since we're already behind the house and we've found this potential entry point, it's crucial to focus our efforts here. Let's look around this area for anything that could help us open the window wider. There might be something nearby in the immediate vicinity or back along the path that we overlooked.
+
+Considering our options, we could try searching for items in the forest path or check if there are any loose objects or tools behind the house that could assist us. 
+
+Let's take a moment to look around behind the house more thoroughly and see if there's anything we can use to pry open the window. 
+
+Action["look"]
+Behind House
+You are behind the white house. A path leads into the forest to the east. In one
+corner of the house there is a small window which is slightly ajar.
+> Looks like we're not spotting anything new behind the house. We should consider our options. Since the window is our best bet right now, we might need to find a tool elsewhere. 
+
+We've explored the forest paths, but maybe we missed picking up a useful item. There could be something back at the open field or along the narrow path north of the house. 
+
+Let's head back to the open field and see if there's anything we missed there. It's a central spot, so we can regroup and plan our next steps from there. 
+
+Action["go west"]
+The kitchen window is closed.
